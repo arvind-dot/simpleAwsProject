@@ -3,19 +3,19 @@ name: Deploy Spring Boot to EC2
 on:
   push:
     branches:
-      - main   # deploy only when main branch is updated
+      - main   # deploy on push to main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout your code
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Set up Java
-      - name: Set up JDK 17
+      # 2️⃣ Set up JDK 17
+      - name: Set up Java
         uses: actions/setup-java@v3
         with:
           java-version: '17'
@@ -25,7 +25,7 @@ jobs:
       - name: Build Spring Boot JAR
         run: mvn clean package -DskipTests
 
-      # 4️⃣ Copy the JAR to EC2
+      # 4️⃣ Copy JAR to EC2
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -35,7 +35,7 @@ jobs:
           source: "target/simpleAwsProject-1.0-SNAPSHOT.jar"
           target: "/home/ec2-user/"
 
-      # 5️⃣ Restart systemd service on EC2
+      # 5️⃣ Restart systemd service safely
       - name: Restart Spring Boot systemd service
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -43,6 +43,14 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Stop any running java processes for safety
+            sudo pkill -f 'java -jar /home/ec2-user/simpleAwsProject-1.0-SNAPSHOT.jar' || true
+            
+            # Reload systemd in case service file changed
             sudo systemctl daemon-reload
+            
+            # Restart the service
             sudo systemctl restart simpleaws
+            
+            # Show status for debug
             sudo systemctl status simpleaws --no-pager

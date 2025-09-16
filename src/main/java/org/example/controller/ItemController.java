@@ -45,4 +45,9 @@ public class ItemController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/version")
+    public String getVersion() {
+        return "v1.1"; // update with every deploy
+    }
 }
