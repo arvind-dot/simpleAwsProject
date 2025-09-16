@@ -3,29 +3,25 @@ name: Deploy Spring Boot to EC2
 on:
   push:
     branches:
-      - main   # deploy on push to main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Set up JDK 17
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3️⃣ Build the JAR
       - name: Build Spring Boot JAR
         run: mvn clean package -DskipTests
 
-      # 4️⃣ Copy JAR to EC2
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -35,22 +31,41 @@ jobs:
           source: "target/simpleAwsProject-1.0-SNAPSHOT.jar"
           target: "/home/ec2-user/"
 
-      # 5️⃣ Restart systemd service safely
-      - name: Restart Spring Boot systemd service
+      - name: Ensure systemd service exists & restart
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Stop any running java processes for safety
-            sudo pkill -f 'java -jar /home/ec2-user/simpleAwsProject-1.0-SNAPSHOT.jar' || true
-            
-            # Reload systemd in case service file changed
-            sudo systemctl daemon-reload
-            
-            # Restart the service
-            sudo systemctl restart simpleaws
-            
-            # Show status for debug
-            sudo systemctl status simpleaws --no-pager
+            SERVICE_FILE=/etc/systemd/system/simpleaws.service
+            JAR_PATH=/home/ec2-user/simpleAwsProject-1.0-SNAPSHOT.jar
+
+            # 1️⃣ Create service if it doesn't exist
+            if [ ! -f $SERVICE_FILE ]; then
+              echo "[Unit]
+  Description=Spring Boot Simple AWS Project
+  After=network.target
+
+  [Service]
+  User=ec2-user
+  WorkingDirectory=/home/ec2-user
+  ExecStart=/usr/bin/java -jar $JAR_PATH --server.address=0.0.0.0
+  SuccessExitStatus=143
+  Restart=always
+  RestartSec=10
+  StandardOutput=file:/home/ec2-user/app.log
+  StandardError=file:/home/ec2-user/app.log
+  
+  [Install]
+  WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
+  sudo systemctl daemon-reload
+  sudo systemctl enable simpleaws
+  fi
+  
+  # 2️⃣ Kill any running old process
+  sudo pkill -f "java -jar $JAR_PATH" || true
+  
+  # 3️⃣ Restart the service
+  sudo systemctl restart simpleaws
+  sudo systemctl status simpleaws --no-pager
