@@ -22,8 +22,8 @@ jobs:
           host: '${{ secrets.EC2_HOST }}'
           username: '${{ secrets.EC2_USER }}'
           key: '${{ secrets.EC2_SSH_KEY }}'
-          source: target/simpleAwsProject-1.0-SNAPSHOT.jar
-          target: /home/ec2-user/
+          source: "target/simpleAwsProject-1.0-SNAPSHOT.jar"
+          target: "/home/ec2-user/simpleAwsProject-1.0-SNAPSHOT.jar"
       - name: Ensure systemd service exists & restart
         uses: appleboy/ssh-action@v0.1.10
         with:
