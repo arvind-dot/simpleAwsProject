@@ -29,5 +29,13 @@ jobs:
       - name: Deploy on EC2
         run: |
           ssh -i ${{ secrets.EC2_SSH_KEY }} ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          SERVICE_FILE=/etc/systemd/system/simpleaws.service
+            #!/bin/bash
+            JAR_PATH=/home/ec2-user/simpleAwsProject-1.0-SNAPSHOT.jar
+            PID=$(pgrep -f 'java -jar')
+            if [ -n "$PID" ]; then
+              echo "Stopping existing application with PID $PID"
+              kill -9 $PID
+            fi
+            echo "Starting application"
+            nohup java -jar $JAR_PATH > /dev/null 2>&1 &          
           JAR_PATH=/home/ec2-user/simpleAwsProject-1.0-SNAPSHOT.jar
