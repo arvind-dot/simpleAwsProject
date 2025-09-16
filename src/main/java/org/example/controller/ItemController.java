@@ -31,6 +31,15 @@ public class ItemController {
         return ResponseEntity.ok(items);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Item> update(@PathVariable String id, @RequestBody Item item) {
+        Item existingItem = service.getById(id);
+        if (existingItem == null) return ResponseEntity.notFound().build();
+        item.setId(id); // Ensure the ID remains the same
+        service.save(item);
+        return ResponseEntity.ok(item);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         service.delete(id);
