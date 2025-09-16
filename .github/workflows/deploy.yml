@@ -37,7 +37,7 @@ jobs:
           [Unit]
           Description=Spring Boot Simple AWS Project
           After=network.target
-  
+          
           [Service]
           User=ec2-user
           WorkingDirectory=/home/ec2-user
